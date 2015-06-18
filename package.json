@@ -21,9 +21,6 @@
     "url": "https://github.com/myndzi/binary-split-streams2/issues"
   },
   "homepage": "https://github.com/myndzi/binary-split-streams2#readme",
-  "dependencies": {
-    "bl": "^0.9.4"
-  },
   "devDependencies": {
     "debug": "^2.2.0",
     "istanbul": "^0.3.15",
