@@ -5,6 +5,7 @@ var Transform = require('stream').Transform,
 
 var debug;
 
+/* istanbul ignore next */
 try {
     debug = require('debug')('split');
 } catch (e) {
