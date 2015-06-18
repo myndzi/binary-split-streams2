@@ -48,6 +48,22 @@ describe('Zero char delimiter', function () {
         test(split(''), ['abcde'], ['a', 'b', 'c', 'd', 'e'], done);
     });
 });
+describe('Sanity', function () {
+    // if you do this with just the passthrough stream, pt.read() will return 'a.bc.d' instead of 'a.b' then 'c.d'
+    // this is just checking that the streams still behave as expected -- one value read per call to .push() in _transform
+    it('should not combine outputs', function (done) {
+        var pt = new PassThrough();
+        var stream = pt.pipe(split('.'));
+        pt.write('a.b');
+        pt.end('c.d');
+        setImmediate(function () {
+            stream.read().toString().should.equal('a');
+            stream.read().toString().should.equal('bc');
+            stream.read().toString().should.equal('d');
+            done();
+        });
+    });
+});
 describe('Single char delimiter', function () {
     it('one chunk', function (done) {
         test(split('.'), ['a.b'], ['a', 'b'], done);
