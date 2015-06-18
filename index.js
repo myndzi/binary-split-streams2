@@ -3,8 +3,6 @@
 var Transform = require('stream').Transform,
     inherits = require('util').inherits;
 
-var BufferList = require('bl');
-
 var debug;
 
 try {
@@ -30,7 +28,7 @@ function Split(_splitter) {
     }
     debug('Using splitter:', splitter);
     
-    this.bl = new BufferList();
+    this.buf = new Buffer(0);
     this.splitter = splitter;
     this.trailingDelim = false;
 }
@@ -48,15 +46,15 @@ Split.prototype._transform = function (data, encoding, callback) {
         return;
     }
     
-    var i = Math.max(0, this.bl.length - this.splitter.length + 1);
+    var i = Math.max(0, this.buf.length - this.splitter.length + 1);
     
     debug('_transform searching from %d', i);
     
-    this.bl.append(data);
+    this.buf = Buffer.concat([this.buf, data]);
     this.trailingDelim = false;
-    
-    outer: for (; i < this.bl.length; i++) {
-        if (this.bl.get(i) !== this.splitter[0]) { continue outer; }
+
+    outer: for (; i < this.buf.length; i++) {
+        if (this.buf[i] !== this.splitter[0]) { continue outer; }
         
         debug('Potential match (i=%d, start=%d)', i, start);
         
@@ -66,11 +64,11 @@ Split.prototype._transform = function (data, encoding, callback) {
         // splitting on long or complex delimiters, so implementing them is not
         // really worth it. instead, we do it the naive way
         for (j = 1; j < this.splitter.length; j++) {
-            if (i + j >= this.bl.length) {
+            if (i + j >= this.buf.length) {
                 debug('Match failed @ %d: reached end of data', i + j);
                 continue outer;
             }
-            if (this.bl.get(i+j) !== this.splitter[j]) {
+            if (this.buf[i+j] !== this.splitter[j]) {
                 debug('Match failed @ %d', i+j);
                 continue outer;
             }
@@ -85,8 +83,7 @@ Split.prototype._transform = function (data, encoding, callback) {
             this.push(new Buffer(0));
         } else {
             debug('Match @ %d-%d, emitting %d-%d', i, i+j, start, i-1);
-            this.push(this.bl.slice(start, i));
-            
+            this.push(this.buf.slice(start, i));
         }
         
         // continue loop from after the splitter
@@ -102,20 +99,20 @@ Split.prototype._transform = function (data, encoding, callback) {
     // throw out old buffers
     if (start) {
         debug('Consuming %d bytes', start);
-        this.bl.consume(start);
+        this.buf = this.buf.slice(start);
     }
     
     callback();
 };
 Split.prototype._flush = function (callback) {
+    debug('flush', this.trailingDelim, this.buf.length);
     if (this.trailingDelim) {
         debug('Pushing empty buffer (trailing delim)');
         this.push(new Buffer(0));
-    } else if (this.bl.length) {
+    } else if (this.buf.length) {
         debug('Flushing leftovers');
-        this.push(this.bl.slice());
+        this.push(this.buf);
     }
-    this.bl.destroy();
 
     callback();
 };
