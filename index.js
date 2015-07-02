@@ -5,6 +5,11 @@ var Transform = require('stream').Transform,
 
 var debug;
 
+var NODE_VERSION = (function () {
+    var matched = process.version.match(/^v(\d+)\.(\d+)\.(\d+)$/);
+    return [+matched[1], +matched[2], +matched[3]];
+})();
+
 /* istanbul ignore next */
 try {
     debug = require('debug')('split');
@@ -14,7 +19,13 @@ try {
 
 function Split(_splitter) {
     if (!(this instanceof Split)) { return new Split(_splitter); }
-    Transform.call(this, { readableObjectMode: true });
+    
+    if (NODE_VERSION[0] === 0 && NODE_VERSION[1] <= 10) {
+        Transform.call(this);
+        this._readableState.objectMode = true;
+    } else {
+        Transform.call(this, { readableObjectMode: true });
+    }
     
     var splitter;
     
