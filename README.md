@@ -1,3 +1,7 @@
+# Notice
+
+Due to changes in the Buffer implementation from node 0.12 to node 4.0, this module suffers a critical performance penalty. My intent with this module was to implement a streams2 buffer splitter that supported laziness; beating 'binary-split' in performance was a pleasant surprise... but currently, under node 4.0, that module sees about 6 times the throughput of this one, so if you don't care about laziness, I recommend using `binary-split` until I can discern why this module is losing its speed.
+
 # binary-split-streams2
 
 This module is a simple streams2 implementation of a stream tokenizer. It takes a stream in, and emits the chunks between the specified delimiter, in the same way as `String.prototype.split` makes arrays from a string.
