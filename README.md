@@ -21,4 +21,6 @@ You can specify the empty string, `''` to split between every character, just li
 
 `binary-split` makes a bit of a case for performance, so I tested this module to make sure I wasn't putting out something "worse" than that module; this module runs about 150% as fast as that one in a simple test utilizing a similar scenario to the one described there (2.4 gb file with ~ 500 byte lines, split on newline).
 
-### Note: the performance note above no longer holds true as of Node.js 4.0. Performance is acceptably similar between this module and `binary-split`, with `binary-split` winning by about 10%. I don't have any direct plans to optimize further, but would welcome pull requests. Node.js 4.0 also introduced a bizarre performance problem that is solved with version 1.0.2 of this module (by accessing arguments.length in non-strict mode in a function that wraps buffer.slice???). Both modules take a performance hit on throughput of over 50% in Node 4.0.
+### Note
+
+The performance note above no longer holds true as of Node.js 4.0. Performance is acceptably similar between this module and `binary-split`, with `binary-split` winning by about 10%. I don't have any direct plans to optimize further, but would welcome pull requests. Node.js 4.0 also introduced a bizarre performance problem that is solved with version 1.0.2 of this module (by accessing arguments.length in non-strict mode in a function that wraps buffer.slice???). Both modules take a performance hit on throughput of over 50% in Node 4.0.
