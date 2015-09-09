@@ -2,8 +2,8 @@
 
 var fs = require('fs');
 var stream = fs.createReadStream('./testfile.json');
-var split = require('binary-split');
-//var split = require('./index');
+//var split = require('binary-split');
+var split = require('./index');
 //var split = require('./binary-split2');
 var start = Date.now();
 
