@@ -1,7 +1,3 @@
-# Notice
-
-Due to changes in the Buffer implementation from node 0.12 to node 4.0, this module suffers a critical performance penalty. My intent with this module was to implement a streams2 buffer splitter that supported laziness; beating 'binary-split' in performance was a pleasant surprise... but currently, under node 4.0, that module sees about 6 times the throughput of this one, so if you don't care about laziness, I recommend using `binary-split` until I can discern why this module is losing its speed.
-
 # binary-split-streams2
 
 This module is a simple streams2 implementation of a stream tokenizer. It takes a stream in, and emits the chunks between the specified delimiter, in the same way as `String.prototype.split` makes arrays from a string.
@@ -24,3 +20,5 @@ You can specify the empty string, `''` to split between every character, just li
 `split` is a useful module and more full-featured than this, but it uses `through` which seems to only provide old-style (streams1) streams. Streams2 streams can be lazy, and that's helpful. There is also a module called `binary-split` which does more or less the same thing as this module, but also uses `through` and seems abandoned.
 
 `binary-split` makes a bit of a case for performance, so I tested this module to make sure I wasn't putting out something "worse" than that module; this module runs about 150% as fast as that one in a simple test utilizing a similar scenario to the one described there (2.4 gb file with ~ 500 byte lines, split on newline).
+
+### Note: the performance note above no longer holds true as of Node.js 4.0. Performance is acceptably similar between this module and `binary-split`, with `binary-split` winning by about 10%. I don't have any direct plans to optimize further, but would welcome pull requests. Node.js 4.0 also introduced a bizarre performance problem that is solved with version 1.0.2 of this module (by accessing arguments.length in non-strict mode in a function that wraps buffer.slice???). Both modules take a performance hit on throughput of over 50% in Node 4.0.
