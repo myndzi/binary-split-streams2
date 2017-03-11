@@ -1,11 +1,8 @@
-# Deprecated
-[binary-split](https://www.npmjs.com/package/binary-split) now uses through2 and is faster; since streams2 is available there's no reason to try and optimize this package to compete. Use `binary-split` instead.
-
 # binary-split-streams2
 
 This module is a simple streams2 implementation of a stream tokenizer. It takes a stream in, and emits the chunks between the specified delimiter, in the same way as `String.prototype.split` makes arrays from a string.
 
-This module operates entirely on buffers and is implemented as a Transform stream. There are no dependencies. This could cause problems with certain delimiters depending on the character encoding of the input; be aware of this. For my purpose (splitting JSON on newlines), it will work just fine; newlines can't be embedded in UTF-8 characters. 
+This module operates entirely on buffers and is implemented as a Transform stream. There are no dependencies. This could cause problems with certain delimiters depending on the character encoding of the input; be aware of this. For my purpose (splitting JSON on newlines), it will work just fine; newlines can't be embedded in UTF-8 characters.
 
 # Usage
 
