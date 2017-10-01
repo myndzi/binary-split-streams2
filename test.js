@@ -38,17 +38,31 @@ describe('Arguments', function () {
         [null, 1, new Date(), { }, [ ], Infinity, NaN, true, false]
         .forEach(function (item) {
             (function () {
-                split(item);
+                split(item, { });
             }).should.throw(/Invalid splitter/);
         });
     });
     it('should only allow positive integers for maxBuffer', function () {
-        [null, -1, 0, -0, new Date(), { }, [ ], Infinity, -Infinity, NaN, true, false]
+        [null, void 0, -1, 0, -0, new Date(), { }, [ ], Infinity, -Infinity, NaN, true, false]
         .forEach(function (item) {
             (function () {
-                split(item);
-            }).should.throw(/Invalid splitter/);
+                split({ maxBuffer: item });
+            }).should.throw(/Invalid maxBuffer/);
+            (function () {
+                split('foo', { maxBuffer: item });
+            }).should.throw(/Invalid maxBuffer/);
         });
+    });
+    it('should fail if maxBuffer is <= the splitter size', function () {
+        (function () {
+            split('foo', { maxBuffer: 1 });
+        }).should.throw(/maxBuffer must be greater/);
+        (function () {
+            split('foo', { maxBuffer: 3 });
+        }).should.throw(/maxBuffer must be greater/);
+        (function () {
+            split('foo', { maxBuffer: 4 });
+        }).should.not.throw();
     });
 });
 describe('Zero char delimiter', function () {
@@ -70,6 +84,14 @@ describe('Sanity', function () {
             stream.read().toString().should.equal('d');
             done();
         });
+    });
+    it('should disallow mutating the splitter', function () {
+        var buf = new Buffer('.');
+        var stream = split(buf);
+        buf[0] = 0;
+        stream.end('a.b');
+        stream.read().toString().should.equal('a');
+        stream.read().toString().should.equal('b');
     });
 });
 describe('Split.indexOf', function () {

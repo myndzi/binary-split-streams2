@@ -24,6 +24,14 @@ module.exports = (function () {
     }
 
     function Split(_splitter, opts) {
+        // valid values for _splitter are strings and buffers
+        // anything else gets counted as an options bag if there is only one argument,
+        // and the splitter will be the default
+        if (typeof _splitter === 'object' && !Buffer.isBuffer(_splitter) && arguments.length === 1) {
+            opts = _splitter || { };
+            _splitter = void 0;
+        }
+
         if (!(this instanceof Split)) { return new Split(_splitter, opts); }
 
         if (NODE_VERSION[0] === 0 && NODE_VERSION[1] <= 10) {
@@ -35,10 +43,12 @@ module.exports = (function () {
 
         var splitter;
 
-        if (_splitter === void 0) {
-            splitter = new Buffer(require('os').EOL);
+        if (Buffer.isBuffer(_splitter)) {
+            splitter = new Buffer(_splitter);
         } else if (typeof _splitter === 'string') {
             splitter = new Buffer(_splitter);
+        } else if (_splitter === void 0) {
+            splitter = new Buffer(require('os').EOL);
         }
 
         if (!Buffer.isBuffer(splitter)) {
