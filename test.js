@@ -4,6 +4,7 @@ require('should');
 
 var PassThrough = require('stream').PassThrough;
 var split = require('./index');
+var os = require('os');
 
 function test(split, input, output, cb) {
     var pt = new PassThrough();
@@ -92,6 +93,26 @@ describe('Sanity', function () {
         stream.end('a.b');
         stream.read().toString().should.equal('a');
         stream.read().toString().should.equal('b');
+    });
+    describe('argument handling', function () {
+        it('accepts a buffer', function (done) {
+            test(split(new Buffer('.')), ['a.b'], ['a', 'b'], done);
+        });
+        it('accepts a buffer with options', function (done) {
+            test(split(new Buffer('.'), { }), ['a.b'], ['a', 'b'], done);
+        });
+        it('accepts a string', function (done) {
+            test(split('.'), ['a.b'], ['a', 'b'], done);
+        });
+        it('accepts a string with options', function (done) {
+            test(split('.', { }), ['a.b'], ['a', 'b'], done);
+        });
+        it('accepts options, with default splitter', function (done) {
+            test(split({ }), ['a'+os.EOL+'b'], ['a', 'b'], done);
+        });
+        it('works with default splitter', function (done) {
+            test(split({ }), ['a'+os.EOL+'b'], ['a', 'b'], done);
+        });
     });
 });
 describe('Split.indexOf', function () {
