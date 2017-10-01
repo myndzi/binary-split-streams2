@@ -15,12 +15,25 @@ This module operates entirely on buffers and is implemented as a Transform strea
 
 You can specify the empty string, `''` to split between every character, just like with `String.prototype.split`. The default delimiter is `require('os').EOL`.
 
+# Truncation
+
+As of version 1.1.0, you may specify a max size of the internal buffer. The buffer is truncated to be no greater than this size *before* emitting new lines, so it is possible that this package will not emit a full line, even if that line fits within the buffer. Size accordingly.
+
+When the buffer is truncated, the stream will emit a 'truncated' event with the amount of bytes that were dropped.
+
+    var split = require('binary-split-streams2');
+    require('fs').createReadStream(__filename)
+		.pipe(split({maxBuffer: 1000}))
+		.on('data', function (chunk) {
+            console.log(chunk);
+        })
+        .on('truncated', function (amount) {
+            console.log('dropped %d bytes from the input stream', amount);
+        });
+
 ### Other modules
 
 `split` is a useful module and more full-featured than this, but it uses `through` which seems to only provide old-style (streams1) streams. Streams2 streams can be lazy, and that's helpful. There is also a module called `binary-split` which does more or less the same thing as this module, but also uses `through` and seems abandoned.
 
-`binary-split` makes a bit of a case for performance, so I tested this module to make sure I wasn't putting out something "worse" than that module; this module runs about 150% as fast as that one in a simple test utilizing a similar scenario to the one described there (2.4 gb file with ~ 500 byte lines, split on newline).
+`binary-split` makes a bit of a case for performance, so I tested this module to make sure I wasn't putting out something "worse" than that module; this module runs about 150% as fast as that one in a simple test utilizing a similar scenario to the one described there (2.4 gb file with ~ 500 byte lines, split on newline). Recent versions of `binary-split` have been equal to or faster than this module, however as of version 1.1.0, in node 4.0 or higher, this module is again much faster.
 
-### Note
-
-The performance note above no longer holds true as of Node.js 4.0. Performance is acceptably similar between this module and `binary-split`, with `binary-split` winning by about 10%. I don't have any direct plans to optimize further, but would welcome pull requests. Node.js 4.0 also introduced a bizarre performance problem that is solved with version 1.0.2 of this module (by accessing arguments.length in non-strict mode in a function that wraps buffer.slice???). Both modules take a performance hit on throughput of over 50% in Node 4.0.
