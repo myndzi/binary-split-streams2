@@ -8,8 +8,8 @@ This module operates entirely on buffers and is implemented as a Transform strea
 
     var split = require('binary-split-streams2');
     require('fs').createReadStream(__filename)
-		.pipe(split())
-		.on('data', function (chunk) {
+        .pipe(split())
+        .on('data', function (chunk) {
             console.log(chunk);
         });
 
@@ -23,8 +23,8 @@ When the buffer is truncated, the stream will emit a 'truncated' event with the 
 
     var split = require('binary-split-streams2');
     require('fs').createReadStream(__filename)
-		.pipe(split({maxBuffer: 1000}))
-		.on('data', function (chunk) {
+        .pipe(split({maxBuffer: 1000}))
+        .on('data', function (chunk) {
             console.log(chunk);
         })
         .on('truncated', function (amount) {
