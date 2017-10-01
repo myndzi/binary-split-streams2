@@ -111,7 +111,7 @@ describe('Sanity', function () {
             test(split({ }), ['a'+os.EOL+'b'], ['a', 'b'], done);
         });
         it('works with default splitter', function (done) {
-            test(split({ }), ['a'+os.EOL+'b'], ['a', 'b'], done);
+            test(split(), ['a'+os.EOL+'b'], ['a', 'b'], done);
         });
     });
 });
