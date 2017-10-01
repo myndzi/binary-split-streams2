@@ -7,7 +7,7 @@ var split = require('./index');
 
 function test(split, input, output, cb) {
     var pt = new PassThrough();
-    
+
     setImmediate(function next() {
         if (input.length === 0) {
             pt.end();
@@ -16,7 +16,7 @@ function test(split, input, output, cb) {
             setImmediate(next);
         }
     });
-    
+
     var split = pt.pipe(split), res = [ ];
     split.on('data', function (chunk) {
         res.push(chunk.toString());
@@ -25,7 +25,7 @@ function test(split, input, output, cb) {
         res.should.match(output);
         cb();
     });
-    
+
     split.on('error', cb);
     pt.on('error', cb);
 }
@@ -64,6 +64,59 @@ describe('Sanity', function () {
         });
     });
 });
+describe('Split.indexOf', function () {
+    function testIndexOf(b1, b2, expected) {
+        b2 = (Array.isArray(b2) ? new Buffer(b2) : b2);
+        split.indexOf(new Buffer(b1), b2).should.equal(expected);
+    }
+
+    describe('fast path', function () {
+        it('should be -1 if not found', function () {
+            testIndexOf([0], 3, -1);
+            testIndexOf([0, 1], 3, -1);
+            testIndexOf([0, 1, 2], 3, -1);
+        });
+        it('should be the offset of the match', function () {
+            testIndexOf([0, 1, 2, 3], 0, 0);
+            testIndexOf([0, 1, 2, 3], 1, 1);
+            testIndexOf([0, 1, 2, 3], 2, 2);
+            testIndexOf([0, 1, 2, 3], 3, 3);
+        });
+    });
+
+    describe('slow path', function () {
+        it('should be -1 if not found', function () {
+            testIndexOf([], [3, 4], -1);
+            testIndexOf([0], [3, 4], -1);
+            testIndexOf([0, 1], [3, 4], -1);
+            testIndexOf([0, 1, 2], [3, 4], -1);
+        });
+        it('should be the offset of the match', function () {
+            testIndexOf([0, 1, 2, 3], [], 0);
+            testIndexOf([0, 1, 2, 3], [0], 0);
+            testIndexOf([0, 1, 2, 3], [1], 1);
+            testIndexOf([0, 1, 2, 3], [2], 2);
+            testIndexOf([0, 1, 2, 3], [3], 3);
+            testIndexOf([0, 1, 2, 3], [0, 1], 0);
+            testIndexOf([0, 1, 2, 3], [1, 2], 1);
+            testIndexOf([0, 1, 2, 3], [2, 3], 2);
+            testIndexOf([0, 0, 1, 2, 3], [0, 1], 1);
+            testIndexOf([0, 1, 1, 2, 3], [1, 2], 2);
+            testIndexOf([0, 1, 2, 2, 3], [2, 3], 3);
+            testIndexOf([0, 1, 2, 2, 2, 3], [2, 3], 4);
+            testIndexOf([0, 1, 2, 2, 2, 3], [2, 2, 3], 3);
+        });
+        it('should fail partial matches', function () {
+            testIndexOf([0, 1, 2, 3], [0, 2], -1);
+            testIndexOf([0, 1, 2, 3], [1, 3], -1);
+            testIndexOf([0, 1, 2, 3], [2, 4], -1);
+            testIndexOf([0, 1, 2, 3], [3, 5], -1);
+        });
+        it('should succeed after partial prefix', function () {
+            testIndexOf([0, 1, 2, 3, 3, 5], [3, 5], 4);
+        });
+    });
+});
 describe('Single char delimiter', function () {
     it('one chunk', function (done) {
         test(split('.'), ['a.b'], ['a', 'b'], done);
@@ -95,6 +148,9 @@ describe('Single char delimiter', function () {
     it('all empty tokens', function (done) {
         test(split('.'), ['.', '..'], ['', '', ''], done);
     });
+    it('empty string', function (done) {
+        test(split('.'), [''], [''], done);
+    });
 });
 describe('Multi-char delimiter', function () {
     it('aligned chunks', function (done) {
@@ -123,6 +179,9 @@ describe('Multi-char delimiter', function () {
     });
     it('all empty tokens', function (done) {
         test(split('#!'), ['#!', '#!#!'], ['', '', ''], done);
+    });
+    it('empty string', function (done) {
+        test(split('#!'), [''], [''], done);
     });
     it('split delimiter', function (done) {
         test(split('#!'), ['a#', '!b#!c'], ['a', 'b', 'c'], done);
