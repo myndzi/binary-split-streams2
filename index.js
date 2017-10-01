@@ -23,8 +23,8 @@ module.exports = (function () {
         debug = function () { };
     }
 
-    function Split(_splitter) {
-        if (!(this instanceof Split)) { return new Split(_splitter); }
+    function Split(_splitter, opts) {
+        if (!(this instanceof Split)) { return new Split(_splitter, opts); }
 
         if (NODE_VERSION[0] === 0 && NODE_VERSION[1] <= 10) {
             Transform.call(this);
@@ -46,6 +46,23 @@ module.exports = (function () {
         }
         //debug('Using splitter:', splitter);
 
+        opts = opts || { };
+        if (opts.hasOwnProperty('maxBuffer')) {
+            if (
+                typeof opts.maxBuffer !== 'number' ||
+                opts.maxBuffer < 1 ||
+                parseInt(opts.maxBuffer) !== opts.maxBuffer ||
+                !isFinite(opts.maxBuffer)
+            ) {
+                throw new Error('Invalid maxBuffer: '+opts.maxBuffer);
+            }
+            if (opts.maxBuffer <= _splitter.length) {
+                throw new Error('maxBuffer must be greater than the length of the splitter');
+            }
+        }
+        debug(opts);
+
+        this.maxBuffer = opts.maxBuffer || 0;
         this.buf = new Buffer(0);
         this.splitter = splitter;
         this.trailingDelim = true;
@@ -100,6 +117,26 @@ module.exports = (function () {
     Split.prototype.slowFind = function (i) {
         return this.indexOf(this.buf, this.splitter, i);
     };
+    Split.prototype.appendBuffer = function (data) {
+        var bl = this.buf.length, dl = data.length, limit = this.maxBuffer;
+
+        if (this.maxBuffer <= 0 || bl + dl <= limit) {
+            this.buf = Buffer.concat([this.buf, data]);
+            return;
+        }
+
+        if (dl === limit) {
+            this.buf = data;
+        } else if (dl > limit) {
+            this.buf = subarray(data, -limit);
+        } else {
+            this.buf = Buffer.concat([
+                this.buf.slice(-(limit - dl)),
+                data
+            ]);
+        }
+        this.emit('truncated', ((bl + dl) - limit));
+    };
     Split.prototype._transform = function (data, encoding, callback) {
         var i = 0, start = 0;
 
@@ -115,7 +152,7 @@ module.exports = (function () {
         i = Math.max(0, this.buf.length - this.splitter.length + 1);
         //debug('_transform searching from %d', i);
 
-        this.buf = Buffer.concat([this.buf, data]);
+        this.appendBuffer(data);
         this.trailingDelim = false;
 
         while ((i = this.findFn(i)) > -1) {

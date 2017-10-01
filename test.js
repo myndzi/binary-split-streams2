@@ -42,6 +42,14 @@ describe('Arguments', function () {
             }).should.throw(/Invalid splitter/);
         });
     });
+    it('should only allow positive integers for maxBuffer', function () {
+        [null, -1, 0, -0, new Date(), { }, [ ], Infinity, -Infinity, NaN, true, false]
+        .forEach(function (item) {
+            (function () {
+                split(item);
+            }).should.throw(/Invalid splitter/);
+        });
+    });
 });
 describe('Zero char delimiter', function () {
     it('emits single characters', function (done) {
@@ -115,6 +123,61 @@ describe('Split.indexOf', function () {
         it('should succeed after partial prefix', function () {
             testIndexOf([0, 1, 2, 3, 3, 5], [3, 5], 4);
         });
+    });
+});
+describe('maxBuffer', function () {
+    function testTruncation(splitter, opts, inputs) {
+        var outputs = [ ], stream = split(splitter, opts);
+        stream.on('truncated', function (amount) {
+            outputs.push(amount);
+        });
+        inputs.forEach(function (input) {
+            stream.write(input);
+        });
+        return outputs;
+    }
+    it('should truncate and emit if it accumulates > maxBuffer data (chunk.length < maxBuffer)', function () {
+        testTruncation('#!', { maxBuffer: 5 }, [
+            '12345',
+            '678'
+        ]).should.deepEqual([3]);
+    });
+    it('should truncate and emit if it accumulates > maxBuffer data (chunk.length === maxBuffer)', function () {
+        testTruncation('#!', { maxBuffer: 5 }, [
+            '12345',
+            '67890'
+        ]).should.deepEqual([5]);
+    });
+    it('should truncate and emit if it accumulates > maxBuffer data (chunk.length > maxBuffer)', function () {
+        testTruncation('#!', { maxBuffer: 5 }, [
+            '12345',
+            '6789012'
+        ]).should.deepEqual([7]);
+    });
+    it('should emit for each truncated chunk', function () {
+        testTruncation('#!', { maxBuffer: 5 }, [
+            '12345',
+            '6',
+            '7',
+            '8',
+            '90'
+        ]).should.deepEqual([1, 1, 1, 2]);
+        testTruncation('#!', { maxBuffer: 7 }, [
+            '12345',
+            '6',
+            '7',
+            '8',
+            '90'
+        ]).should.deepEqual([1, 2]);
+    });
+    it('should not truncate', function () {
+        testTruncation('#!', { }, [
+            '12345',
+            '6',
+            '7',
+            '8',
+            '90'
+        ]).should.deepEqual([]);
     });
 });
 describe('Single char delimiter', function () {
