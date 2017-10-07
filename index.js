@@ -72,7 +72,8 @@ module.exports = (function () {
         }
         debug(opts);
 
-        this.maxBuffer = opts.maxBuffer || 0;
+        this.maxBuffer = opts.maxBuffer || Infinity;
+        this.strictTruncation = !!opts.strictTruncation;
         this.buf = new Buffer(0);
         this.splitter = splitter;
         this.trailingDelim = true;
@@ -82,6 +83,7 @@ module.exports = (function () {
                 Split.indexOf
         );
         this.findFn = (this.splitter.length === 1 ? this.fastFind : this.slowFind);
+        this.pushFn = (this.strictTruncation ? this.pushTruncated : this.push);
     }
     inherits(Split, Transform);
 
@@ -127,25 +129,13 @@ module.exports = (function () {
     Split.prototype.slowFind = function (i) {
         return this.indexOf(this.buf, this.splitter, i);
     };
-    Split.prototype.appendBuffer = function (data) {
-        var bl = this.buf.length, dl = data.length, limit = this.maxBuffer;
-
-        if (this.maxBuffer <= 0 || bl + dl <= limit) {
-            this.buf = Buffer.concat([this.buf, data]);
-            return;
-        }
-
-        if (dl === limit) {
-            this.buf = data;
-        } else if (dl > limit) {
-            this.buf = subarray(data, -limit);
+    Split.prototype.pushTruncated = function (buf) {
+        if (buf.length > this.maxBuffer) {
+            this.push(subarray(buf, -this.maxBuffer));
+            this.emit('truncated', buf.length - this.maxBuffer);
         } else {
-            this.buf = Buffer.concat([
-                this.buf.slice(-(limit - dl)),
-                data
-            ]);
+            this.push(buf);
         }
-        this.emit('truncated', ((bl + dl) - limit));
     };
     Split.prototype._transform = function (data, encoding, callback) {
         var i = 0, start = 0;
@@ -162,7 +152,7 @@ module.exports = (function () {
         i = Math.max(0, this.buf.length - this.splitter.length + 1);
         //debug('_transform searching from %d', i);
 
-        this.appendBuffer(data);
+        this.buf = Buffer.concat([ this.buf, data ]);
         this.trailingDelim = false;
 
         while ((i = this.findFn(i)) > -1) {
@@ -174,7 +164,7 @@ module.exports = (function () {
                 this.push(new Buffer(0));
             } else {
                 //debug('Match @ %d, emitting %d-%d', i, start, i-1);
-                this.push(subarray(this.buf, start, i));
+                this.pushFn(subarray(this.buf, start, i));
             }
 
             // continue loop from after the splitter
@@ -193,6 +183,12 @@ module.exports = (function () {
         // at the end, so keep track of it
         this.trailingDelim = (this.buf.length === 0);
 
+        var extra = this.buf.length - this.maxBuffer;
+        if (extra > 0) {
+            this.buf = subarray(this.buf, -this.maxBuffer);
+            this.emit('truncated', extra);
+        }
+
         callback();
     };
     Split.prototype._flush = function (callback) {
@@ -202,7 +198,7 @@ module.exports = (function () {
             this.push(new Buffer(0));
         } else if (this.buf.length) {
             //debug('Flushing leftovers');
-            this.push(this.buf);
+            this.pushFn(this.buf);
         }
 
         callback();

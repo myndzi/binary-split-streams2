@@ -170,32 +170,46 @@ describe('Split.indexOf', function () {
 });
 describe('maxBuffer', function () {
     function testTruncation(splitter, opts, inputs) {
-        var outputs = [ ], stream = split(splitter, opts);
+        var outputs = [ ], chunks = [ ], stream = split(splitter, opts);
         stream.on('truncated', function (amount) {
             outputs.push(amount);
         });
+        stream.on('data', function (chunk) {
+            chunks.push(chunk.toString());
+        });
+        function read() {
+            while (1) {
+                var chunk = stream.read();
+                if (chunk === null) { break; }
+                outputs.push(chunk.toString());
+            }
+        }
         inputs.forEach(function (input) {
             stream.write(input);
+            read();
         });
-        return outputs;
+        stream.end();
+        read();
+
+        return { outputs: outputs, chunks: chunks };
     }
     it('should truncate and emit if it accumulates > maxBuffer data (chunk.length < maxBuffer)', function () {
         testTruncation('#!', { maxBuffer: 5 }, [
             '12345',
             '678'
-        ]).should.deepEqual([3]);
+        ]).outputs.should.deepEqual([3]);
     });
     it('should truncate and emit if it accumulates > maxBuffer data (chunk.length === maxBuffer)', function () {
         testTruncation('#!', { maxBuffer: 5 }, [
             '12345',
             '67890'
-        ]).should.deepEqual([5]);
+        ]).outputs.should.deepEqual([5]);
     });
     it('should truncate and emit if it accumulates > maxBuffer data (chunk.length > maxBuffer)', function () {
         testTruncation('#!', { maxBuffer: 5 }, [
             '12345',
             '6789012'
-        ]).should.deepEqual([7]);
+        ]).outputs.should.deepEqual([7]);
     });
     it('should emit for each truncated chunk', function () {
         testTruncation('#!', { maxBuffer: 5 }, [
@@ -204,14 +218,40 @@ describe('maxBuffer', function () {
             '7',
             '8',
             '90'
-        ]).should.deepEqual([1, 1, 1, 2]);
+        ]).outputs.should.deepEqual([1, 1, 1, 2]);
         testTruncation('#!', { maxBuffer: 7 }, [
             '12345',
             '6',
             '7',
             '8',
             '90'
-        ]).should.deepEqual([1, 2]);
+        ]).outputs.should.deepEqual([1, 2]);
+    });
+    it('should emit chunks longer than maxBuffer when received all at once', function () {
+        testTruncation('.', { maxBuffer: 2 }, [
+            'abcdefg.'
+        ]).outputs.should.deepEqual([]);
+    });
+    it('should truncate chunks longer than maxBuffer when received in pieces', function () {
+        testTruncation('.', { maxBuffer: 2 }, [
+            'abc',
+            'def',
+            'g.'
+        ]).outputs.should.deepEqual([1, 3]);
+    });
+    it('should always truncate the flushed data', function () {
+        testTruncation('.', { maxBuffer: 2 }, [
+            'abcdefg'
+        ]).outputs.should.deepEqual([5]);
+    });
+    it('should emit all the chunks it can before truncation', function () {
+        testTruncation('.', { maxBuffer: 2 }, [
+            'aaa.bbb.ccc'
+        ]).outputs.should.deepEqual([1]);
+        testTruncation('.', { maxBuffer: 2 }, [
+            'aaa.bbb',
+            '.ccc'
+        ]).chunks.should.deepEqual(['aaa', 'bb', 'cc']);
     });
     it('should not truncate', function () {
         testTruncation('#!', { }, [
@@ -220,7 +260,51 @@ describe('maxBuffer', function () {
             '7',
             '8',
             '90'
-        ]).should.deepEqual([]);
+        ]).outputs.should.deepEqual([]);
+    });
+    describe('strict truncation', function () {
+        it('should NOT emit chunks longer than maxBuffer when received all at once', function () {
+            testTruncation('.', { maxBuffer: 2, strictTruncation: true }, [
+                'abcdefg.'
+            ]).outputs.should.deepEqual([5]);
+            testTruncation('.', { maxBuffer: 2, strictTruncation: true }, [
+                'abcdefg.'
+            ]).chunks.should.deepEqual(['fg', '']);
+        });
+        it('should truncate chunks longer than maxBuffer when received in pieces', function () {
+            testTruncation('.', { maxBuffer: 2, strictTruncation: true }, [
+                'abc',
+                'def',
+                'g.'
+            ]).outputs.should.deepEqual([1, 3, 1]);
+            testTruncation('.', { maxBuffer: 2, strictTruncation: true }, [
+                'abc',
+                'def',
+                'g.'
+            ]).chunks.should.deepEqual(['fg', '']);
+        });
+        it('should truncate the flushed data', function () {
+            testTruncation('.', { maxBuffer: 2, strictTruncation: true }, [
+                'abcdefg'
+            ]).outputs.should.deepEqual([5]);
+            testTruncation('.', { maxBuffer: 2, strictTruncation: true }, [
+                'abcdefg'
+            ]).chunks.should.deepEqual(['fg']);
+        });
+        it('should truncate every chunk', function () {
+            testTruncation('.', { maxBuffer: 2, strictTruncation: true }, [
+                'aaa.bbb.ccc'
+            ]).outputs.should.deepEqual([1, 1, 1]);
+            testTruncation('.', { maxBuffer: 2, strictTruncation: true }, [
+                'aaa.bbb',
+                '.ccc'
+            ]).chunks.should.deepEqual(['aa', 'bb', 'cc']);
+        });
+    });
+});
+describe('Empty delimiter', function () {
+    it('emits every byte separately', function (done) {
+        test(split(''), ['abc'], ['a', 'b', 'c'], done);
     });
 });
 describe('Single char delimiter', function () {
