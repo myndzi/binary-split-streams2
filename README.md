@@ -17,14 +17,15 @@ You can specify the empty string, `''` to split between every character, just li
 
 # Truncation
 
-As of version 1.1.0, you may specify a max size of the internal buffer. The buffer is truncated to be no greater than this size *before* emitting new lines, so it is possible that this package will not emit a full line, even if that line fits within the buffer. Size accordingly.
+As of version 1.1.0, you may specify a max size of the internal buffer. The buffer is truncated to be no greater than this size *after* emitting new chunks, so it is possible that this package will emit a chunk of size greater than `maxBuffer` when it receives that entire chunk plus the splitter in a single write. You can supply the option `strictTruncation: true` if you want all chunks to be forcibly truncated for you, which will guarantee that your reads will be <= `maxBuffer` in size.
 
-When the buffer is truncated, the stream will emit a 'truncated' event with the amount of bytes that were dropped.
+When the buffer is truncated, the stream will emit a `truncated` event with the amount of bytes that were dropped. If `strictTruncation` is enabled, it will also emit a `truncated` event when a chunk it emits that would have been too long is truncated. The sum of the values passed to the `truncated` event and the sum of the lengths of your read chunks will equal the size of your input minus all splitters.
 
     var split = require('binary-split-streams2');
     require('fs').createReadStream(__filename)
-        .pipe(split({maxBuffer: 1000}))
+        .pipe(split({maxBuffer: 1000, strictTruncation: true}))
         .on('data', function (chunk) {
+            assert(chunk.length <= 1000);
             console.log(chunk);
         })
         .on('truncated', function (amount) {

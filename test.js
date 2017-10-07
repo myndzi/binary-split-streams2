@@ -301,6 +301,50 @@ describe('maxBuffer', function () {
             ]).chunks.should.deepEqual(['aa', 'bb', 'cc']);
         });
     });
+    describe('sanity', function () {
+        function byteSumSanityTest(strictTruncation, splitter, loopSize, cb) {
+            var stream = split(splitter, { maxBuffer: 5 });
+            // a.b.c -> 'data' events is one greater than the number of splitters
+            // a.b.c. -> same as number of splitters
+            // for simplicity, we ensure we don't end on a splitter and subtract one
+            // splitter's worth of bytes initially
+            var bytesWritten = 0, bytesRead = 0, splitterBytes = -splitter.length, bytesTruncated = 0;
+            stream.on('data', function (chunk) {
+                splitterBytes += splitter.length;
+                bytesRead += chunk.length;
+            });
+            stream.on('truncated', function (amount) {
+                bytesTruncated += amount;
+            });
+            stream.on('end', function () {
+                bytesWritten.should.equal(bytesRead + splitterBytes + bytesTruncated);
+                cb(bytesWritten, bytesRead, splitterBytes, bytesTruncated);
+            });
+            var i, tmp;
+            for (i = 0; i < loopSize; i++) {
+                tmp = Math.random().toString(31).slice(Math.floor(Math.random()*10)+2);
+                bytesWritten += tmp.length;
+                stream.write(tmp);
+            }
+            bytesWritten++;
+            stream.end('z'); // ensures we don't end on the splitter
+        }
+        [
+            { strict: false, splitter: 'a' },
+            { strict: false, splitter: 'aa' },
+            { strict: true, splitter: 'a' },
+            { strict: true, splitter: 'aa' },
+        ].forEach(function (opts) {
+            for (var i = 0; i < 5; i++) {
+                it('should account for every byte (sample '+i+', strict: false, splitter: '+opts.splitter+')', function (done) {
+                    byteSumSanityTest(opts.strict, opts.splitter, 1000, function (bytesWritten, bytesRead, splitterBytes, bytesTruncated) {
+                        bytesWritten.should.equal(bytesRead + splitterBytes + bytesTruncated);
+                        done();
+                    });
+                });
+            }
+        });
+    });
 });
 describe('Empty delimiter', function () {
     it('emits every byte separately', function (done) {
