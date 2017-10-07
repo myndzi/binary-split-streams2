@@ -140,6 +140,7 @@ module.exports = (function () {
     Split.prototype._transform = function (data, encoding, callback) {
         var i = 0, start = 0;
 
+        this.trailingDelim = false;
         if (this.splitter.length === 0) {
             //debug('Empty splitter loop');
             for (i = 0; i < data.length; i++) {
@@ -153,7 +154,6 @@ module.exports = (function () {
         //debug('_transform searching from %d', i);
 
         this.buf = Buffer.concat([ this.buf, data ]);
-        this.trailingDelim = false;
 
         while ((i = this.findFn(i)) > -1) {
             // match
