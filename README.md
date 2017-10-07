@@ -1,10 +1,12 @@
-[![Build Status](https://travis-ci.org/myndzi/binary-split-streams2.svg?branch=master)](https://travis-ci.org/myndzi/binary-split-streams2)
-
 # binary-split-streams2
 
 This module is a simple streams2 implementation of a stream tokenizer. It takes a stream in, and emits the chunks between the specified delimiter, in the same way as `String.prototype.split` makes arrays from a string.
 
 This module operates entirely on buffers and is implemented as a Transform stream. There are no dependencies. This could cause problems with certain delimiters depending on the character encoding of the input; be aware of this. For my purpose (splitting JSON on newlines), it will work just fine; newlines can't be embedded in UTF-8 characters.
+
+Supported Node versions: 0.10 through latest/8.x
+
+[![Build Status](https://travis-ci.org/myndzi/binary-split-streams2.svg?branch=master)](https://travis-ci.org/myndzi/binary-split-streams2)
 
 # Usage
 
