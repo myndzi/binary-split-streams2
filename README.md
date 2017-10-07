@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.org/myndzi/binary-split-streams2.svg?branch=master)](https://travis-ci.org/myndzi/binary-split-streams2)
+
 # binary-split-streams2
 
 This module is a simple streams2 implementation of a stream tokenizer. It takes a stream in, and emits the chunks between the specified delimiter, in the same way as `String.prototype.split` makes arrays from a string.
