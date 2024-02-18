@@ -1,4 +1,3 @@
 /node_modules
 /coverage
-/testfile.json
-/testfile2.json
+/lib
